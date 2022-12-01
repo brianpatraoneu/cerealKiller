@@ -2,6 +2,10 @@ package edu.northeastern.csye6200.cerealkillers;
 
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -53,30 +57,32 @@ class Meal {
 
 public class App 
 {
+	static String MEALDB_URL = "https://www.themealdb.com/api/json/v2/9973533/filter.php?i=";
+			
     public static void main( String[] args )
     {
-        System.out.println( "Hello World!" );
-		HttpRequest request = HttpRequest.newBuilder()
-				.uri(URI.create("https://www.themealdb.com/api/json/v2/9973533/filter.php?i=chicken_breast,garlic"))
-				.method("GET", HttpRequest.BodyPublishers.noBody())
-				.build();
-		HttpResponse<String> response = null;
-		try {
-			response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		System.out.println(response.body());
-		final JSONObject obj = new JSONObject(response.body());
+    	StringBuilder queryString = new StringBuilder();
+    	try {
+    		DBConnection db = new DBConnection(); 
+            ResultSet rs = db.connectAndExecute("Select * from cerealkillers.grocery;","Select");
+            while (rs.next()) {
+            	queryString.append(rs.getString("groceryItem")+",");
+             }
+            queryString.setLength(queryString.length() - 1);
+    	} catch (Exception e) {
+    		System.out.println(e.getMessage());
+    	}
+    	MealApi api = new MealApi();
+    	String response = api.getMeals(queryString.toString());
+		final JSONObject obj = new JSONObject(response);
 	    final JSONArray meals = obj.getJSONArray("meals");
 	    Meal[] mealArr = new Meal[meals.length()];
 	    JSONObject[] arr = new JSONObject[meals.length()];
 	    for(int i=0;i<meals.length();i++) {
 	    	arr[i] = (JSONObject) meals.get(i);
 	    	mealArr[i] = new Meal(arr[i].getInt("idMeal"),arr[i].getString("strMeal"),arr[i].getString("strMealThumb"));
-//	    	System.out.println(mealArr[i].toString());
+	    	System.out.println(mealArr[i].toString());
+	    	System.out.println(api.getMeal(mealArr[i].getMealID()));
 	    }
     }
 }
